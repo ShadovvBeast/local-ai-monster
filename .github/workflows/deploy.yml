@@ -3,7 +3,7 @@ name: Deploy to Amazon Linux 2
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   deploy:
