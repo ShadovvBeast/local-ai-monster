@@ -1,5 +1,5 @@
 # Local AI Monster
-
+![Local AI Monster logo](public/logo.png)
 Fully local, privacy-first AI in your browser — or use it instantly at [localai.monster](https://localai.monster).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) [![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/shadovvbeast)

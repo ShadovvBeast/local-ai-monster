@@ -7,8 +7,8 @@
   --bg-panel: #1a1a1a;
   --bg-panel-alt: #141414;
   --bg-panel-hover: #2a2a2a;
-  --accent: #0a2a53;
-  --accent-hover: #0d5dc5;
+  --accent: #0d5dc5;
+  --accent-hover: #0a2a53;
   --text-main: #e0e0e0;
   --text-muted: #b0b0b0;
   --text-subtle: #808080;
@@ -246,11 +246,25 @@ progress::-moz-progress-bar {
 .cs-message-list {
   background-color: transparent !important;
   padding: 15px;
-  height: 100%;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  height: 90%;
 }
 
 .cs-message {
   margin-bottom: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+/* Put user (outgoing) avatar on right */
+.cs-message--outgoing {
+  flex-direction: row-reverse;
+}
+
+.cs-message__content {
+  max-width: calc(100% - 36px); /* leave room for avatar */
 }
 
 .cs-message__content {
@@ -279,7 +293,53 @@ progress::-moz-progress-bar {
 .cs-message-input {
   background-color: var(--bg-chat) !important;
   border-top: 1px solid var(--border) !important;
+  display: flex !important;
+  align-items: center !important;
+  padding: 10px !important;
+  gap: 10px;
 }
+
+/* input area */
+.cs-message-input__content-editor-wrapper {
+  flex: 1 1 auto !important;
+  background-color: var(--bg-panel-alt) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 6px !important;
+  padding: 6px 10px !important;
+  display: block !important; /* allow internal contenteditable div to occupy full area */
+  cursor: text !important;
+}
+
+.cs-message-input__content-editor {
+  flex: 1 1 auto !important;
+  background: transparent !important;
+  border: none !important;
+  color: var(--text-main) !important;
+  font-size: 14px !important;
+  outline: none !important;
+  resize: none !important;
+}
+
+.cs-message-input__content-editor::placeholder {
+  color: var(--text-muted) !important;
+}
+
+/* send button */
+.cs-button--send {
+  background-color: var(--accent) !important;
+  border-radius: 6px !important;
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.cs-button--send:hover {
+  background-color: var(--accent-hover) !important;
+}
+
 
 .cs-message-input__content-editor-wrapper {
   background-color: black !important;
@@ -308,6 +368,15 @@ progress::-moz-progress-bar {
   width: 28px !important;
   height: 28px !important;
   border-radius: 50%;
+  overflow: hidden;
+}
+
+/* Ensure the image inside the avatar is cropped properly */
+.avatar img,
+.cs-avatar__image {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
 }
 
 .cs-main-container {
@@ -406,4 +475,33 @@ progress::-moz-progress-bar {
 .cs-message__content {
   animation: pop-in 0.25s ease;
   box-shadow: 0 1px 4px rgba(0,0,0,0.4) !important;
+}
+
+
+/* Add these to explicitly remove any default textures/gradients */
+.cs-message__content,
+.cs-message--incoming .cs-message__content,
+.cs-message--outgoing .cs-message__content {
+  background-image: none !important;
+  background: var(--bg-dark) !important; /* Reinforce for incoming */
+}
+
+.cs-message-list,
+.cs-chat-container,
+.cs-message-input,
+.cs-message-input__content-editor-wrapper,
+.cs-message-input__content-editor,
+.cs-typing-indicator {
+  background-image: none !important;
+}
+
+/* For markdown and code blocks (ensure no light bleed) */
+.react-markdown {
+  background-image: none;
+  background-color: transparent;
+}
+
+.shiki,
+pre.shiki {
+  background-image: none !important;
 }
