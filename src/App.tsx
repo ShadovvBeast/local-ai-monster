@@ -107,6 +107,7 @@ const App: React.FC = () => {
   });
   const [currentChatId, setCurrentChatId] = useState('1');
   const [typing, setTyping] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const currentChat = chats.find(c => c.id === currentChatId) || chats[0];
 
@@ -121,25 +122,25 @@ const App: React.FC = () => {
   async function init() {
     setStatus('Checking WebGPU support...');
     if (!navigator.gpu) {
-      setStatus('WebGPU not supported on this browser or device.');
+      setStatus('WebGPU not supported.');
       return;
     }
-    setStatus('Estimating available VRAM...');
+    setStatus('Estimating VRAM...');
     const vram = await estimateVRAM();
     setStatus(`Estimated VRAM: ${vram.toFixed(0)} MB`);
-    setStatus('Fetching available models from Hugging Face...');
+    setStatus('Fetching models...');
     let modelList = await fetchModels();
     if (modelList.length === 0) {
-      setStatus('API fetch failed; using fallback models.');
+      setStatus('Using fallback models.');
       modelList = fallbackModels();
     }
     setModels(modelList);
     const available = modelList.filter(m => m.vram < vram * 0.9);
     if (available.length === 0) {
-      setStatus('Insufficient VRAM for any available models.');
+      setStatus('Insufficient VRAM.');
       return;
     }
-    setStatus('Selecting the absolute best model for your hardware setup...');
+    setStatus('Selecting best model...');
     available.sort((a, b) => b.params - a.params);
     const best = available[0].id;
     setSelectedModel(best);
@@ -151,7 +152,6 @@ const App: React.FC = () => {
       { id: 'Llama-3-8B-Instruct-q4f16_1-MLC', params: 8, vram: 5600 },
       { id: 'Phi-3-mini-4k-instruct-q4f16_1-MLC', params: 3.8, vram: 2660 },
       { id: 'gemma-2-9b-it-q4f16_1-MLC', params: 9, vram: 6300 },
-      // Add more fallbacks if needed
     ];
   }
 
@@ -162,11 +162,10 @@ const App: React.FC = () => {
       return data
         .filter((m: any) => m.id.endsWith('-MLC') && m.id.includes('Instruct'))
         .map((m: any) => {
-          const fullId = m.id;
-          const shortId = fullId.split('/')[1];
+          const shortId = m.id.split('/')[1];
           const paramsMatch = m.id.match(/([\d.]+)B/);
           const params = paramsMatch ? parseFloat(paramsMatch[1]) : 0;
-          const vram = params * 700; // Approximate VRAM usage in MB
+          const vram = params * 700;
           return { id: shortId, params, vram };
         })
         .filter((m: Model) => m.params > 0);
@@ -195,7 +194,7 @@ const App: React.FC = () => {
   }
 
   async function loadModel(modelId: string) {
-    setStatus(`Loading the best model: ${modelId}...`);
+    setStatus(`Loading ${modelId}...`);
     setProgress(0);
     const initProgress = (report: any) => {
       setStatus(report.text);
@@ -204,7 +203,7 @@ const App: React.FC = () => {
     try {
       const loadedEngine = await webllm.CreateMLCEngine(modelId, { initProgressCallback: initProgress });
       setEngine(loadedEngine);
-      setStatus('Ready! Start chatting.');
+      setStatus('Ready.');
       setProgress(null);
     } catch (e) {
       setStatus(`Error: ${(e as Error).message}`);
@@ -218,7 +217,7 @@ const App: React.FC = () => {
     const newMessages = [...currentChat.messages, { role: 'user', content: text }];
     updateChat({ ...currentChat, messages: newMessages });
     const history = [
-      { role: 'system', content: 'You are Local AI Monster, a helpful and powerful AI running locally.' },
+      { role: 'system', content: 'You are Local AI Monster, a powerful local AI assistant.' },
       ...newMessages,
     ];
     try {
@@ -252,99 +251,102 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="app">
-      <header className="header">
-        <img src="/logo.png" alt="Local AI Monster" className="logo" />
-      </header>
-      <div className="status-container">
-        <div className="status">{status}</div>
-        {progress !== null && (
-          <progress className="progress-bar" value={progress} max={1} />
-        )}
-      </div>
-      <div className="container">
-        <aside className="sidebar">
-          <button onClick={newChat} className="new-chat-btn">+ New Chat</button>
-          <ul className="chat-list">
-            {chats.map(chat => (
-              <li
-                key={chat.id}
-                onClick={() => setCurrentChatId(chat.id)}
-                className={`chat-item ${chat.id === currentChatId ? 'active' : ''}`}
-              >
-                {chat.title}
-              </li>
-            ))}
-          </ul>
-          <ExpansionPanel title="Settings" className="settings-panel">
-            <div className="setting-item">
-              <label>Model</label>
-              <select
-                value={selectedModel || ''}
-                onChange={e => {
-                  setSelectedModel(e.target.value);
-                  loadModel(e.target.value);
-                }}
-                className="model-select"
-              >
-                {models.map(m => (
-                  <option key={m.id} value={m.id}>
-                    {m.id} ({m.params}B)
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="setting-item">
-              <label>Temperature: {temperature.toFixed(1)}</label>
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.1}
-                value={temperature}
-                onChange={e => setTemperature(parseFloat(e.target.value))}
-                className="slider"
-              />
-            </div>
-            <div className="setting-item">
-              <label>Max Tokens: {maxTokens}</label>
-              <input
-                type="number"
-                value={maxTokens}
-                onChange={e => setMaxTokens(parseInt(e.target.value))}
-                className="number-input"
-              />
-            </div>
-          </ExpansionPanel>
-        </aside>
-        <main className="chat-main">
-          <ChatContainer>
-            <MessageList typingIndicator={typing ? <TypingIndicator content="Local AI Monster is thinking..." /> : null}>
-              {currentChat.messages.map((msg, i) => (
-                <Message
-                  key={i}
-                  model={{
-                    direction: msg.role === 'user' ? 'outgoing' : 'incoming',
-                    position: 'single',
+    <div className="app-wrapper">
+      <div className="app">
+        <header className="header">
+          <img src="/logo.png" alt="Local AI Monster" className="logo" />
+          <button className="sidebar-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
+            ☰
+          </button>
+        </header>
+        <div className="content">
+          <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+            <button onClick={newChat} className="new-chat-btn">+ New Chat</button>
+            <ul className="chat-list">
+              {chats.map(chat => (
+                <li
+                  key={chat.id}
+                  onClick={() => {
+                    setCurrentChatId(chat.id);
+                    setSidebarOpen(false);
+                  }}
+                  className={`chat-item ${chat.id === currentChatId ? 'active' : ''}`}
+                >
+                  {chat.title}
+                </li>
+              ))}
+            </ul>
+            <ExpansionPanel title="Settings" className="settings-panel">
+              <div className="setting">
+                <label>Model</label>
+                <select
+                  value={selectedModel || ''}
+                  onChange={e => {
+                    setSelectedModel(e.target.value);
+                    loadModel(e.target.value);
                   }}
                 >
-                  {msg.role === 'assistant' ? (
-                    <Message.CustomContent>
-                      <AssistantMessageContent
-                        content={msg.content}
-                        isStreaming={typing && i === currentChat.messages.length - 1}
-                      />
-                    </Message.CustomContent>
-                  ) : (
-                    <Message.CustomContent>{msg.content}</Message.CustomContent>
-                  )}
-                  <Avatar src={msg.role === 'assistant' ? '/logo.png' : ''} className="avatar" />
-                </Message>
-              ))}
-            </MessageList>
-            <MessageInput placeholder="Type your message..." onSend={handleSend} disabled={!engine} attachButton={false} className="message-input" />
-          </ChatContainer>
-        </main>
+                  {models.map(m => (
+                    <option key={m.id} value={m.id}>
+                      {m.id} ({m.params}B)
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="setting">
+                <label>Temperature: {temperature.toFixed(1)}</label>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.1}
+                  value={temperature}
+                  onChange={e => setTemperature(parseFloat(e.target.value))}
+                />
+              </div>
+              <div className="setting">
+                <label>Max Tokens: {maxTokens}</label>
+                <input
+                  type="number"
+                  value={maxTokens}
+                  onChange={e => setMaxTokens(parseInt(e.target.value))}
+                />
+              </div>
+            </ExpansionPanel>
+          </aside>
+          <main className="main">
+            <div className="status-bar">
+              <span className="status">{status}</span>
+              {progress !== null && <progress value={progress} max={1} className="progress" />}
+            </div>
+            <ChatContainer>
+              <MessageList typingIndicator={typing ? <TypingIndicator content="Thinking..." /> : null}>
+                {currentChat.messages.map((msg, i) => (
+                  <Message
+                    key={i}
+                    model={{
+                      direction: msg.role === 'user' ? 'outgoing' : 'incoming',
+                      position: 'single',
+                    }}
+                  >
+                    {msg.role === 'assistant' ? (
+                      <Message.CustomContent>
+                        <AssistantMessageContent
+                          content={msg.content}
+                          isStreaming={typing && i === currentChat.messages.length - 1}
+                        />
+                      </Message.CustomContent>
+                    ) : (
+                      <Message.CustomContent>{msg.content}</Message.CustomContent>
+                    )}
+                    <Avatar src={msg.role === 'assistant' ? '/logo.png' : undefined} className="avatar" />
+                  </Message>
+                ))}
+              </MessageList>
+              <MessageInput placeholder="Type message..." onSend={handleSend} disabled={!engine} attachButton={false} />
+            </ChatContainer>
+          </main>
+        </div>
       </div>
     </div>
   );
