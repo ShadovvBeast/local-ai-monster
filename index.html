@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local AI Monster</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            color: #007bff;
+        }
+        #status {
+            background-color: #fff;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        #chat {
+            background-color: #fff;
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 400px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        #chat p {
+            margin: 5px 0;
+            padding: 5px;
+            border-radius: 3px;
+        }
+        #chat p:nth-child(odd) {
+            background-color: #e9ecef;
+        }
+        #input {
+            width: 70%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        #send {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #send:hover {
+            background-color: #0056b3;
+        }
+        .loading {
+            display: inline-block;
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.4; }
+            50% { opacity: 1; }
+            100% { opacity: 0.4; }
+        }
+    </style>
+</head>
+<body>
+    <h1>Local AI Monster</h1>
+    <div id="status">Initializing...</div>
+    <div id="chat"></div>
+    <input id="input" type="text" placeholder="Type your message here...">
+    <button id="send">Send</button>
+
+    <script type="module">
+        import * as webllm from "https://esm.run/@mlc-ai/web-llm";
+
+        // Curated list of open-source models supported by WebLLM (with approx VRAM requirements in MB and param count in billions for selection)
+        // Sourced from WebLLM docs and model configs; only quantized variants for efficiency
+        const models = [
+            { id: "Llama-3.2-1B-Instruct-q4f16_1-MLC", vram: 879, params: 1 },
+            { id: "Llama-3.2-3B-Instruct-q4f16_1-MLC", vram: 2264, params: 3 },
+            { id: "Phi-3-mini-4k-instruct-q4f16_1-MLC", vram: 2310, params: 3.8 },
+            { id: "Gemma-2-2b-it-q4f16_1-MLC", vram: 1700, params: 2 },
+            { id: "Mistral-7B-Instruct-v0.3-q4f16_1-MLC", vram: 4100, params: 7 },
+            { id: "Llama-3-8B-Instruct-q4f16_1-MLC", vram: 5001, params: 8 },
+            { id: "Qwen2-7B-Instruct-q4f16_1-MLC", vram: 4200, params: 7 }
+        ];
+
+        // Function to estimate available VRAM (rough binary search via buffer allocation)
+        async function estimateVRAM() {
+            if (!navigator.gpu) return 0;
+            const adapter = await navigator.gpu.requestAdapter();
+            if (!adapter) return 0;
+            const device = await adapter.requestDevice();
+            let low = 0;
+            let high = 32 * 1024 * 1024 * 1024; // Start with 32GB max assumption
+            while (low < high) {
+                const mid = Math.floor((low + high + 1) / 2);
+                try {
+                    const buffer = device.createBuffer({ size: mid, usage: GPUBufferUsage.STORAGE });
+                    buffer.destroy();
+                    low = mid;
+                } catch {
+                    high = mid - 1;
+                }
+            }
+            device.destroy();
+            return low / (1024 * 1024); // Return in MB
+        }
+
+        // Initialization
+        async function init() {
+            const status = document.getElementById('status');
+            const chatDiv = document.getElementById('chat');
+            const input = document.getElementById('input');
+            const send = document.getElementById('send');
+            send.disabled = true; // Disable until ready
+
+            status.innerText = 'Checking WebGPU support...';
+            status.classList.add('loading');
+
+            if (!navigator.gpu) {
+                status.innerText = 'WebGPU not supported. Use a compatible browser like Chrome with hardware acceleration.';
+                status.classList.remove('loading');
+                return;
+            }
+
+            status.innerText = 'Estimating GPU resources...';
+            const estimatedVRAM = await estimateVRAM();
+            status.innerText = `Estimated available VRAM: ${estimatedVRAM.toFixed(0)} MB`;
+
+            // Filter models that fit (with 10% margin for overhead)
+            let availableModels = models.filter(m => m.vram < estimatedVRAM * 0.9);
+            if (availableModels.length === 0) {
+                status.innerText += '\nInsufficient resources for any model. Try a device with more GPU memory.';
+                status.classList.remove('loading');
+                return;
+            }
+
+            // Select the "best" (largest params)
+            availableModels.sort((a, b) => b.params - a.params);
+            const bestModel = availableModels[0].id;
+            status.innerText += `\nSelected best model: ${bestModel} (${availableModels[0].params}B params)`;
+
+            status.innerText += '\nDownloading and loading model (this may take time; cached for future use)...';
+
+            const initProgressCallback = (report) => {
+                status.innerText = `Loading model: ${report.text} (${(report.progress * 100).toFixed(2)}%)`;
+            };
+
+            try {
+                const engine = await webllm.CreateMLCEngine(bestModel, { initProgressCallback });
+
+                status.innerText = 'Local AI Monster is ready! Start chatting below.';
+                status.classList.remove('loading');
+                send.disabled = false;
+
+                // Chat functionality
+                send.onclick = async () => {
+                    const message = input.value.trim();
+                    if (!message) return;
+                    input.value = '';
+                    chatDiv.innerHTML += `<p><strong>User:</strong> ${message}</p>`;
+                    chatDiv.scrollTop = chatDiv.scrollHeight;
+
+                    const messages = [
+                        { role: "system", content: "You are a helpful, local AI assistant called Local AI Monster." },
+                        { role: "user", content: message }
+                    ];
+
+                    // Add placeholder for AI response with loading animation
+                    chatDiv.innerHTML += `<p><strong>AI:</strong> <span id="ai-response" class="loading">Thinking...</span></p>`;
+                    const responseSpan = document.getElementById('ai-response');
+                    chatDiv.scrollTop = chatDiv.scrollHeight;
+
+                    const chunks = await engine.chat.completions.create({
+                        messages,
+                        stream: true,
+                        temperature: 0.7
+                    });
+
+                    let fullResponse = '';
+                    for await (const chunk of chunks) {
+                        const delta = chunk.choices[0]?.delta.content || '';
+                        fullResponse += delta;
+                        responseSpan.innerText = fullResponse;
+                    }
+
+                    responseSpan.classList.remove('loading');
+                    chatDiv.scrollTop = chatDiv.scrollHeight;
+                };
+            } catch (error) {
+                status.innerText = `Error loading model: ${error.message}. Try refreshing or selecting a smaller model manually.`;
+                status.classList.remove('loading');
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
