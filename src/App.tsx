@@ -339,7 +339,7 @@ const App: React.FC = () => {
                     ) : (
                       <Message.CustomContent>{msg.content}</Message.CustomContent>
                     )}
-                    <Avatar src={msg.role === 'assistant' ? '/logo.png' : undefined} className="avatar" />
+                    <Avatar src={msg.role === 'assistant' ? '/logo.png' : '/user.jpg'} className="avatar" />
                   </Message>
                 ))}
               </MessageList>

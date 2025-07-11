@@ -1,6 +1,6 @@
 # Local AI Monster
 
-Fully local, privacy-first AI in your browser — or use it instantly at [locali.monster](https://locali.monster).
+Fully local, privacy-first AI in your browser — or use it instantly at [localai.monster](https://localai.monster).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) [![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/shadovvbeast)
 
@@ -15,7 +15,7 @@ Local AI Monster brings powerful AI capabilities directly to your device — no 
 
 ## 🌐 Live Demo
 
-Try the latest version online: **[locali.monster](https://locali.monster)**
+Try the latest version online: **[localai.monster](https://localai.monster)**
 
 ---
 
