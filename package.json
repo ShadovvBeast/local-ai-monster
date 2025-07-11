@@ -33,6 +33,11 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.3.4",
     "typescript": "^5.8.3",
-    "vite": "^4.3.2"
+    "vite": "^4.3.2",
+    "vite-plugin-pwa": "^1.0.1",
+    "workbox-core": "^6.6.1",
+    "workbox-routing": "^6.6.1",
+    "workbox-precaching": "^6.6.1",
+    "workbox-strategies": "^6.6.1"
   }
 }
