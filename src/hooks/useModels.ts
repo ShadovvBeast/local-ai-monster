@@ -1,6 +1,7 @@
 // src/hooks/useModels.ts
 import { useState, useEffect } from 'react';
 import * as webllm from '@mlc-ai/web-llm';
+
 import { Model } from '../types';
 
 export const useModels = () => {
@@ -8,7 +9,8 @@ export const useModels = () => {
   const [progress, setProgress] = useState<number | null>(null);
   const [models, setModels] = useState<Model[]>([]);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
-  const [engine, setEngine] = useState<webllm.MLCEngine | null>(null);
+  // Use MLCEngineInterface that is compatible with both normal and service-worker engines
+  const [engine, setEngine] = useState<any>(null);
   const [temperature, setTemperature] = useState(0.7);
   const [maxTokens, setMaxTokens] = useState(256);
 
@@ -93,12 +95,15 @@ export const useModels = () => {
   async function loadModel(modelId: string) {
     setStatus(`Loading ${modelId}...`);
     setProgress(0);
-    const initProgress = (report: any) => {
+          const initProgress = (report: any) => {
       setStatus(report.text);
       setProgress(report.progress);
     };
     try {
-      const loadedEngine = await webllm.CreateMLCEngine(modelId, { initProgressCallback: initProgress });
+            // Leverage the Service Worker based engine to avoid re-loading models between page visits
+      const loadedEngine = await webllm.CreateServiceWorkerMLCEngine(modelId, {
+        initProgressCallback: initProgress,
+      });
       setEngine(loadedEngine);
       setStatus('Ready.');
       setProgress(null);

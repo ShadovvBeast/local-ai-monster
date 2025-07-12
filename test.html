@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Qwen-3-0.5B  –  Visible Critical Thinking</title>
+<script type="module">
+/* -------------------------------------------------------------
+   1.  WebLLM imports
+----------------------------------------------------------------*/
+import { CreateMLCEngine } from "https://esm.run/@mlc-ai/web-llm";
+
+/* -------------------------------------------------------------
+   2.  DOM shortcuts
+----------------------------------------------------------------*/
+const $ = (sel) => document.querySelector(sel);
+const inputBox   = $('#prompt');
+const sendBtn    = $('#send');
+const answerBox  = $('#answer');
+const thoughtBox = $('#thought');
+const mermaidBox = $('#mermaid');
+
+/* -------------------------------------------------------------
+   3.  Init Mermaid (live rendering)
+----------------------------------------------------------------*/
+import mermaid from 'https://esm.run/mermaid';
+mermaid.initialize({ startOnLoad:true, theme:'base', themeVariables:{ primaryColor:'#ffffff', primaryTextColor:'#000', lineColor:'#333' } });
+
+/* -------------------------------------------------------------
+   4.  Create the engine (0.5B Instruct, 4-bit)
+----------------------------------------------------------------*/
+const engine = await CreateMLCEngine(
+  "Qwen/Qwen2-0.5B-Instruct-MLX",   // 0.5B dense model
+  {
+    initProgressCallback: (info) => {
+      $('#status').textContent = info.text;
+    }
+  }
+);
+
+/* -------------------------------------------------------------
+   5.  Chat + streaming handler
+----------------------------------------------------------------*/
+sendBtn.onclick = async () => {
+  const prompt = inputBox.value.trim();
+  if (!prompt) return;
+
+  answerBox.innerHTML  = '';
+  thoughtBox.innerHTML = '';
+  mermaidBox.innerHTML = '';
+
+  // Build messages with /think flag
+  const messages = [
+    { role: 'user', content: '/think\n\n' + prompt }
+  ];
+
+  let currentThought = '';   // everything inside <think> … </think>
+  let outsideThink   = false;
+
+  const reply = await engine.chat.completions.create({
+    messages,
+    stream: true,
+    max_tokens: 1024,
+    temperature: 0.2
+  });
+
+  for await (const chunk of reply) {
+    const delta = chunk.choices[0]?.delta?.content || '';
+    if (delta.includes('<think>')) continue;
+    if (delta.includes('</think>')) {
+      outsideThink = true;
+      continue;
+    }
+
+    if (!outsideThink) {
+      currentThought += delta;
+      updateDiagram(currentThought);
+    } else {
+      answerBox.insertAdjacentText('beforeend', delta);
+    }
+  }
+};
+
+/* -------------------------------------------------------------
+   6.  Dynamic Mermaid diagram
+----------------------------------------------------------------*/
+function updateDiagram(text) {
+  // Very small “parser”: split on punctuation to create nodes
+  const sentences = text
+    .split(/[.!?]+/)
+    .map(s => s.trim())
+    .filter(s => s.length > 3);
+
+  const nodes = sentences.map((s, idx) => `T${idx}["${s.replace(/"/g, '\\"')}"]`);
+  const edges = [];
+  for (let i = 0; i < nodes.length - 1; i++) edges.push(`T${i} --> T${i+1}`);
+
+  const graph = `flowchart TD\n${nodes.join('\n')}\n${edges.join('\n')}`;
+  mermaidBox.innerHTML = graph;
+  mermaid.init(undefined, mermaidBox);
+}
+</script>
+
+<style>
+  body { font-family: system-ui, sans-serif; margin: 2rem; background:#fafafa; }
+  #wrap { display: flex; gap: 1rem; }
+  #controls { flex: 0 0 300px; }
+  #viz   { flex: 1; }
+  textarea { width: 100%; height: 4rem; }
+  button   { margin-top: .5rem; }
+  pre { background:#fff; border:1px solid #ddd; padding:.5rem; white-space:pre-wrap; }
+  .box { min-height: 120px; border:1px solid #ddd; background:#fff; padding:.5rem; margin-bottom:.5rem; }
+</style>
+</head>
+<body>
+<h1>Qwen-3-0.5B  —  “Visible Critical Thinking”</h1>
+<p id="status">Loading model …</p>
+
+<div id="wrap">
+  <div id="controls">
+    <label>Prompt
+      <textarea id="prompt" placeholder="Ask anything …"></textarea>
+    </label>
+    <button id="send">Send</button>
+  </div>
+
+  <div id="viz">
+    <div class="box">
+      <strong>Current chain-of-thought (live)</strong>
+      <pre id="thought"></pre>
+    </div>
+
+    <div class="box">
+      <strong>Answer</strong>
+      <pre id="answer"></pre>
+    </div>
+
+    <div class="box">
+      <strong>Diagram of reasoning steps</strong>
+      <div id="mermaid"></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

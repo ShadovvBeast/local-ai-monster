@@ -28,7 +28,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
+  min-height: 100dvh;
   width: 100vw;
   padding: 20px;
   box-sizing: border-box;
@@ -504,4 +504,60 @@ progress::-moz-progress-bar {
 .shiki,
 pre.shiki {
   background-image: none !important;
+}
+
+/* ---------------- Responsive & Mobile Tweaks ---------------- */
+@media (max-width: 480px) {
+  body {
+    font-size: 14px;
+  }
+
+  .app-wrapper {
+    padding: 10px;
+    min-height: 100dvh;
+  }
+
+  .app {
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .header {
+    padding: 12px;
+  }
+
+  .logo {
+    height: 48px;
+  }
+
+  .main {
+    padding: 10px;
+  }
+
+  .cs-message__content {
+    font-size: 13px !important;
+    padding: 8px 10px !important;
+  }
+
+  .cs-message-input {
+    flex-direction: column !important;
+    gap: 6px !important;
+  }
+
+  .cs-button--send {
+    width: 100% !important;
+    height: 38px !important;
+    min-width: unset !important;
+  }
+
+  .cs-message-input__content-editor-wrapper {
+    width: 100% !important;
+  }
+}
+
+/* Extra large screens */
+@media (min-width: 1280px) {
+  .app {
+    max-width: 1400px;
+  }
 }

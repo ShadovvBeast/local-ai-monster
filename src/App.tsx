@@ -2,6 +2,7 @@ import React from 'react';
 import { useModels } from './hooks/useModels';
 import { useChats } from './hooks/useChats';
 import Header from './components/layout/Header';
+
 import Sidebar from './components/layout/Sidebar';
 import StatusBar from './components/StatusBar';
 import ChatView from './components/ChatView';
