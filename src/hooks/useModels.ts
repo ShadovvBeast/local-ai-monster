@@ -131,6 +131,12 @@ export const useModels = () => {
     };
     try {
             // Leverage the Service Worker based engine to avoid re-loading models between page visits
+      // Ensure the service worker is registered and active before engine creation
+      if ('serviceWorker' in navigator) {
+        try {
+          await navigator.serviceWorker.ready;
+        } catch {}
+      }
       const loadedEngine = await webllm.CreateServiceWorkerMLCEngine(modelId, {
         initProgressCallback: initProgress,
       });
