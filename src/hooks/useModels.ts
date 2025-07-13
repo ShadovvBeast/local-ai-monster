@@ -135,6 +135,15 @@ export const useModels = () => {
       if ('serviceWorker' in navigator) {
         try {
           await navigator.serviceWorker.ready;
+          if (!navigator.serviceWorker.controller) {
+            await new Promise((res) => {
+              const listener = () => {
+                navigator.serviceWorker.removeEventListener('controllerchange', listener);
+                res(undefined);
+              };
+              navigator.serviceWorker.addEventListener('controllerchange', listener);
+            });
+          }
         } catch {}
       }
       const loadedEngine = await webllm.CreateServiceWorkerMLCEngine(modelId, {
