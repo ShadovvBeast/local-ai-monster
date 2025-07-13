@@ -1,11 +1,12 @@
-// src/hooks/useModels.ts
 import { useState, useEffect } from 'react';
 import * as webllm from '@mlc-ai/web-llm';
+import { getGPUTier } from 'detect-gpu';
 
 import { Model } from '../types';
 
 export const useModels = () => {
   const [status, setStatus] = useState('Initializing...');
+  const [detectedGpu, setDetectedGpu] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [models, setModels] = useState<Model[]>([]);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
@@ -13,6 +14,9 @@ export const useModels = () => {
   const [engine, setEngine] = useState<any>(null);
   const [temperature, setTemperature] = useState(0.7);
   const [maxTokens, setMaxTokens] = useState(256);
+  type OptimizeMode = 'speed' | 'balanced' | 'quality';
+  const [optimizeMode, setOptimizeMode] = useState<OptimizeMode>('balanced');
+  const getRecencyWeight = (mode: OptimizeMode) => (mode === 'speed' ? 0 : mode === 'quality' ? 1 : 0.5);
 
   useEffect(() => {
     init();
@@ -24,24 +28,32 @@ export const useModels = () => {
       setStatus('WebGPU not supported.');
       return;
     }
-    setStatus('Estimating VRAM...');
-    const vram = await estimateVRAM();
+    const gpuTier = await getGPUTier();
+    if (!gpuTier || !gpuTier.gpu) {
+      setStatus('Failed to detect GPU.');
+      return;
+    }
+    setStatus('Fetching GPU info...');
+    const vram = await fetchTechPowerUpVRAM(gpuTier.gpu as string);
+    if (!vram) {
+      setStatus('Unable to determine VRAM.');
+      return;
+    }
     setStatus(`Estimated VRAM: ${vram.toFixed(0)} MB`);
+    const recencyWeight = getRecencyWeight(optimizeMode);
     setStatus('Fetching models...');
-    let modelList = await fetchModels();
+    let modelList = await fetchModels(vram, recencyWeight);
     if (modelList.length === 0) {
       setStatus('Using fallback models.');
       modelList = fallbackModels();
     }
-    setModels(modelList);
-    const available = modelList.filter(m => m.vram < vram * 0.9);
-    if (available.length === 0) {
+    if (modelList.length === 0) {
       setStatus('Insufficient VRAM.');
       return;
     }
+    setModels(modelList);
     setStatus('Selecting best model...');
-    available.sort((a, b) => b.params - a.params);
-    const best = available[0].id;
+    const best = modelList[0].id;
     setSelectedModel(best);
     await loadModel(best);
   }
@@ -54,48 +66,66 @@ export const useModels = () => {
     ];
   }
 
-  async function fetchModels(): Promise<Model[]> {
+  async function fetchModels(maxVramMB: number, recencyWeight: number): Promise<Model[]> {
+    const SEARCH_QUERY = 'q4f16_1'; // prefer int4 single-file weights
+    const HF_URL = `https://huggingface.co/api/models?search=${SEARCH_QUERY}&library=mlc&sort=downloads&direction=-1&limit=100`;
+    const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
     try {
-      const res = await fetch('https://huggingface.co/api/models?author=mlc-ai&sort=downloads&direction=-1&limit=50');
+      const res = await fetch(HF_URL);
       const data = await res.json();
       return data
-        .filter((m: any) => m.id.endsWith('-MLC') && m.id.includes('Instruct'))
+        .filter((m: any) => m.cardData?.library_name === 'mlc')
         .map((m: any) => {
           const shortId = m.id.split('/')[1];
           const paramsMatch = m.id.match(/([\d.]+)B/);
           const params = paramsMatch ? parseFloat(paramsMatch[1]) : 0;
           const vram = params * 700;
-          return { id: shortId, params, vram };
+          const modified = Date.parse(m.lastModified ?? m.createdAt ?? 0);
+          return { id: shortId, params, vram, modified };
         })
-        .filter((m: Model) => m.params > 0);
+        .filter((m: Model) => m.params > 0)
+        .filter((m: Model) => m.vram < maxVramMB * 0.9)
+        .map((m: any) => m as any)
+        .sort((a: any, b: any) => {
+          const now = Date.now();
+          const ageA = Math.max(1, (now - a.modified) / MS_PER_DAY);
+          const ageB = Math.max(1, (now - b.modified) / MS_PER_DAY);
+          const scoreA = recencyWeight * (1 / ageA) + (1 - recencyWeight) * (1 / a.params);
+          const scoreB = recencyWeight * (1 / ageB) + (1 - recencyWeight) * (1 / b.params);
+          return scoreB - scoreA;
+        });
     } catch {
       return [];
     }
   }
 
-  async function estimateVRAM(): Promise<number> {
-    const adapter = await navigator.gpu.requestAdapter();
-    if (!adapter) return 0;
-    const device = await adapter.requestDevice();
-    let low = 0, high = 32 * 1024 * 1024 * 1024;
-    while (low < high) {
-      const mid = Math.floor((low + high + 1) / 2);
-      try {
-        const buffer = device.createBuffer({ size: mid, usage: GPUBufferUsage.STORAGE });
-        buffer.destroy();
-        low = mid;
-      } catch {
-        high = mid - 1;
-      }
+  /**
+   * Query TechPowerUp database to get VRAM in MB.
+   */
+  async function fetchTechPowerUpVRAM(searchName: string): Promise<number | null> {
+    const PROXY = 'https://corsproxy.io/?url=';
+    try {
+      const query = encodeURIComponent(searchName);
+      const res = await fetch(`${PROXY}https://www.techpowerup.com/gpu-specs/?ajaxsrch=${query}`);
+      const text = await res.text();
+      // Parse memory column of the first row
+      const cellMatchGB = text.match(/<td>\s*(\d+)\s*GB/i);
+      if (cellMatchGB) return parseInt(cellMatchGB[1], 10) * 1024;
+      const cellMatchMB = text.match(/<td>\s*(\d+)\s*MB/i);
+      if (cellMatchMB) return parseInt(cellMatchMB[1], 10);
+      return null;
+    } catch (e) {
+      console.error('Failed to fetch TechPowerUp VRAM:', e);
+      debugger;
+      return null;
     }
-    device.destroy();
-    return low / (1024 * 1024);
   }
 
   async function loadModel(modelId: string) {
     setStatus(`Loading ${modelId}...`);
     setProgress(0);
-          const initProgress = (report: any) => {
+    const initProgress = (report: any) => {
       setStatus(report.text);
       setProgress(report.progress);
     };
@@ -126,5 +156,9 @@ export const useModels = () => {
     maxTokens,
     setMaxTokens,
     loadModel,
+    detectedGpu,
+    setDetectedGpu,
+    optimizeMode,
+    setOptimizeMode,
   };
 };

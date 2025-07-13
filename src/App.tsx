@@ -20,6 +20,8 @@ const App: React.FC = () => {
     setTemperature,
     maxTokens,
     setMaxTokens,
+    optimizeMode,
+    setOptimizeMode,
     setSelectedModel,
     loadModel,
   } = useModels();
@@ -86,6 +88,8 @@ const App: React.FC = () => {
             setTemperature={setTemperature}
             maxTokens={maxTokens}
             setMaxTokens={setMaxTokens}
+            optimizeMode={optimizeMode}
+            setOptimizeMode={setOptimizeMode}
           />
           <main className="main">
             <StatusBar status={status} progress={progress} />

@@ -1,5 +1,6 @@
 import React from 'react';
 import { ExpansionPanel } from '@chatscope/chat-ui-kit-react';
+import Potentiometer from '../Potentiometer';
 import { Model, Chat } from '../../types';
 
 interface SidebarProps {
@@ -17,6 +18,8 @@ interface SidebarProps {
   setTemperature: React.Dispatch<React.SetStateAction<number>>;
   maxTokens: number;
   setMaxTokens: React.Dispatch<React.SetStateAction<number>>;
+  optimizeMode: 'speed' | 'balanced' | 'quality';
+  setOptimizeMode: React.Dispatch<React.SetStateAction<'speed' | 'balanced' | 'quality'>>;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -34,6 +37,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   setTemperature,
   maxTokens,
   setMaxTokens,
+  optimizeMode,
+  setOptimizeMode,
 }) => {
   return (
     <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
@@ -86,6 +91,14 @@ const Sidebar: React.FC<SidebarProps> = ({
             type="number"
             value={maxTokens}
             onChange={e => setMaxTokens(parseInt(e.target.value))}
+          />
+        </div>
+        <div className="setting">
+          <label>Optimize for:</label>
+          <Potentiometer
+            value={{ speed:0, balanced:1, quality:2 }[optimizeMode] as 0 | 1 | 2}
+            onChange={v => setOptimizeMode((['speed','balanced','quality'] as const)[v])}
+            labels={['Speed','Balanced','Quality']}
           />
         </div>
       </ExpansionPanel>

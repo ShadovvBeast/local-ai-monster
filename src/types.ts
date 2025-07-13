@@ -1,7 +1,8 @@
 export interface Model {
     id: string;
-    params: number;
-    vram: number;
+    params: number; // Billion parameters
+    vram: number;  // Estimated VRAM requirement in MB
+    modified?: number; // Unix epoch ms of last modification on HF, for recency scoring
   }
   
   export interface Chat {
