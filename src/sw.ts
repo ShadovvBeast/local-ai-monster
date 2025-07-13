@@ -19,9 +19,16 @@ clientsClaim()
 import { ServiceWorkerMLCEngineHandler } from '@mlc-ai/web-llm'
 let mlcHandler: ServiceWorkerMLCEngineHandler | undefined
 
-self.addEventListener('activate', (_event) => {
-  mlcHandler = new ServiceWorkerMLCEngineHandler()
-  console.log('MLC Service Worker is ready')
+// Eagerly create handler so it exists on every reload (SW already active)
+mlcHandler = new ServiceWorkerMLCEngineHandler()
+console.log('MLC Service Worker is ready (eager)')
+
+// First-time install fallback
+self.addEventListener('activate', () => {
+  if (!mlcHandler) {
+    mlcHandler = new ServiceWorkerMLCEngineHandler()
+  }
+  console.log('MLC Service Worker is ready (activate)')
 })
 
 // Cache static assets (already handled by precache, keep example)
