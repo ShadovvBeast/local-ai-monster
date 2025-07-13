@@ -15,8 +15,10 @@ export default defineConfig({
       },
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'robots.txt', 'apple-touch-icon.png'],
+      injectManifest: {
+        maximumFileSizeToCacheInBytes: 100 * 1024 * 1024 * 1024, //   100 MiB
+      },
       workbox: {
-        maximumFileSizeToCacheInBytes: 100 * 1024 * 1024 * 1024,
         runtimeCaching: [
           {
             urlPattern: ({ url }) => url.origin === self.location.origin,
