@@ -13,6 +13,10 @@ if (wbManifest.length) {
 }
 cleanupOutdatedCaches()
 
+self.addEventListener('install', () => {
+  (self as any).skipWaiting();
+});
+
 clientsClaim()
 
 // --- WebLLM Service Worker handler ---
@@ -21,6 +25,8 @@ let mlcHandler: ServiceWorkerMLCEngineHandler | undefined
 
 // Eagerly create handler so it exists on every reload (SW already active)
 mlcHandler = new ServiceWorkerMLCEngineHandler()
+// Expose on global to ensure Rollup treats this as a side-effect and keeps the line
+;(self as any)._mlcHandler = mlcHandler
 console.log('MLC Service Worker is ready (eager)')
 
 // First-time install fallback
