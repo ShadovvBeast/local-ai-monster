@@ -1110,14 +1110,33 @@ progress::-moz-progress-bar {
 }
 
 /* Responsive Design */
+@media (max-width: 1024px) {
+  .sidebar {
+    width: 280px;
+    min-width: 280px;
+  }
+  
+  .content {
+    height: calc(100vh - 70px);
+  }
+  
+  .header {
+    padding: 16px;
+  }
+}
+
 @media (max-width: 768px) {
   .sidebar {
     position: absolute;
     top: 0;
     left: 0;
     height: 100%;
+    width: 300px;
+    min-width: 300px;
     z-index: 100;
     transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
   }
   
   .sidebar.open {
@@ -1126,10 +1145,36 @@ progress::-moz-progress-bar {
   
   .sidebar-toggle {
     display: flex !important;
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+  }
+  
+  .header {
+    padding: 12px 60px 12px 20px;
+    justify-content: center;
+  }
+  
+  .chat-view {
+    width: 100%;
+  }
+  
+  .message-area {
+    padding: var(--space-lg);
+  }
+  
+  .status-bar {
+    padding: var(--space-md) var(--space-lg);
+    flex-direction: column;
+    gap: var(--space-sm);
+    align-items: flex-start;
   }
   
   .cs-message-input {
     padding: var(--space-md) !important;
+    margin: var(--space-md);
   }
   
   .cs-message-list {
@@ -1286,56 +1331,124 @@ progress::-moz-progress-bar {
 
 .shiki,
 pre.shiki {
-  background-image: none !important;
+background-image: none !important;
 }
 
 /* ---------------- Responsive & Mobile Tweaks ---------------- */
+@media (max-width: 640px) {
+.cs-message__content {
+max-width: 90% !important;
+font-size: 14px !important;
+}
+
+.cs-message {
+gap: var(--space-sm);
+}
+
+.message-area {
+padding: var(--space-md);
+}
+
+.status-bar {
+padding: var(--space-sm) var(--space-md);
+min-height: 40px;
+}
+}
+
 @media (max-width: 480px) {
-  body {
-    font-size: 14px;
-  }
+body {
+font-size: 14px;
+}
 
-  .app-wrapper {
-    padding: 10px;
-    min-height: 100dvh;
-  }
+.app-wrapper {
+padding: 0;
+min-height: 100dvh;
+}
 
-  .app {
-    border-radius: 0;
-    box-shadow: none;
-  }
+.app {
+border-radius: 0;
+box-shadow: none;
+}
 
-  .header {
-    padding: 12px;
-  }
+.header {
+padding: 10px 50px 10px 15px;
+min-height: 50px;
+}
 
-  .logo {
-    height: 48px;
-  }
+.logo {
+height: 32px;
+}
 
-  .main {
-    padding: 10px;
-  }
+.sidebar-toggle {
+left: 15px;
+width: 36px;
+height: 36px;
+min-width: 36px;
+}
 
-  .cs-message__content {
-    font-size: 13px !important;
-    padding: 8px 10px !important;
-  }
+.main {
+padding: 0;
+}
 
-  .cs-message-input {
-    flex-direction: column !important;
-    gap: 6px !important;
-  }
+.content {
+height: calc(100vh - 50px);
+}
 
-  .cs-button--send {
-    width: 100% !important;
-    height: 38px !important;
-    min-width: unset !important;
-  }
+.message-area {
+padding: var(--space-sm);
+}
 
-  .cs-message-input__content-editor-wrapper {
-    width: 100% !important;
-  }
+.cs-message__content {
+font-size: 13px !important;
+padding: var(--space-sm) var(--space-md) !important;
+max-width: 95% !important;
+border-radius: var(--radius-lg) !important;
+}
+
+.cs-message {
+margin-bottom: var(--space-md);
+gap: var(--space-xs);
+}
+
+.cs-message-input {
+padding: var(--space-sm) !important;
+margin: 0 !important;
+flex-direction: row !important;
+gap: var(--space-sm) !important;
+}
+
+.cs-message-input__content-editor-wrapper {
+min-height: 40px !important;
+padding: var(--space-sm) var(--space-md) !important;
+}
+
+.cs-button--send {
+width: 40px !important;
+height: 40px !important;
+min-width: 40px !important;
+border-radius: var(--radius-lg) !important;
+}
+
+.cs-button--send svg {
+width: 16px !important;
+height: 16px !important;
+}
+
+.avatar,
+.cs-avatar {
+width: 28px !important;
+height: 28px !important;
+}
+
+.status-bar {
+padding: var(--space-xs) var(--space-sm);
+min-height: 36px;
+font-size: 12px;
+}
+
+.status-text {
+font-size: 11px;
+}
 }
 
 /* Extra large screens */
