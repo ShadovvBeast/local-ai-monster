@@ -75,7 +75,7 @@ export const useModels = () => {
       const res = await fetch(HF_URL);
       const data = await res.json();
       return data
-        .filter((m: any) => m.cardData?.library_name === 'mlc')
+        .filter((m: any) => m.library_name === 'mlc-llm')
         .map((m: any) => {
           const shortId = m.id.split('/')[1];
           const paramsMatch = m.id.match(/([\d.]+)B/);

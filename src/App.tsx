@@ -69,7 +69,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="app-wrapper">
+    <div className="app-wrapper fade-in">
       <div className="app">
         <Header setSidebarOpen={setSidebarOpen} sidebarOpen={sidebarOpen} />
         <div className="content">
