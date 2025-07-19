@@ -7,6 +7,7 @@ import { Model } from '../types';
 export const useModels = () => {
   const [status, setStatus] = useState('Initializing...');
   const [detectedGpu, setDetectedGpu] = useState<string | null>(null);
+  const [detectedVram, setDetectedVram] = useState<number | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [models, setModels] = useState<Model[]>([]);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
@@ -24,7 +25,7 @@ export const useModels = () => {
 
   async function init() {
     setStatus('Checking WebGPU support...');
-    if (!navigator.gpu) {
+    if (!(navigator as any).gpu) {
       setStatus('WebGPU not supported.');
       return;
     }
@@ -33,12 +34,14 @@ export const useModels = () => {
       setStatus('Failed to detect GPU.');
       return;
     }
+    setDetectedGpu(gpuTier.gpu as string);
     setStatus('Fetching GPU info...');
     const vram = await fetchTechPowerUpVRAM(gpuTier.gpu as string);
     if (!vram) {
       setStatus('Unable to determine VRAM.');
       return;
     }
+    setDetectedVram(vram);
     setStatus(`Estimated VRAM: ${vram.toFixed(0)} MB`);
     const recencyWeight = getRecencyWeight(optimizeMode);
     setStatus('Fetching models...');
@@ -173,6 +176,7 @@ export const useModels = () => {
     loadModel,
     detectedGpu,
     setDetectedGpu,
+    detectedVram,
     optimizeMode,
     setOptimizeMode,
   };

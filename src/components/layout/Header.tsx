@@ -1,11 +1,14 @@
 import React from 'react';
+import GPUDisplay from '../GPUDisplay';
 
 interface HeaderProps {
   sidebarOpen: boolean;
   setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  detectedGpu: string | null;
+  status: string;
 }
 
-const Header: React.FC<HeaderProps> = ({ sidebarOpen, setSidebarOpen }) => {
+const Header: React.FC<HeaderProps> = ({ sidebarOpen, setSidebarOpen, detectedGpu, status }) => {
   return (
     <header className="header">
       <div className="header-left">
@@ -30,10 +33,7 @@ const Header: React.FC<HeaderProps> = ({ sidebarOpen, setSidebarOpen }) => {
       </div>
       
       <div className="header-right">
-        <div className="status-indicator">
-          <div className="status-dot"></div>
-          <span className="status-text">Ready</span>
-        </div>
+        <GPUDisplay detectedGpu={detectedGpu} status={status} />
       </div>
     </header>
   );

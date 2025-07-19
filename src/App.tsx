@@ -24,6 +24,8 @@ const App: React.FC = () => {
     setOptimizeMode,
     setSelectedModel,
     loadModel,
+    detectedGpu,
+    detectedVram,
   } = useModels();
 
   const {
@@ -71,7 +73,12 @@ const App: React.FC = () => {
   return (
     <div className="app-wrapper fade-in">
       <div className="app">
-        <Header setSidebarOpen={setSidebarOpen} sidebarOpen={sidebarOpen} />
+        <Header 
+          setSidebarOpen={setSidebarOpen} 
+          sidebarOpen={sidebarOpen} 
+          detectedGpu={detectedGpu}
+          status={status}
+        />
         <div className="content">
           <Sidebar
             sidebarOpen={sidebarOpen}
