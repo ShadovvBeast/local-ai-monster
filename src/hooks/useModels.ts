@@ -3,6 +3,7 @@ import * as webllm from '@mlc-ai/web-llm';
 import { getGPUTier } from 'detect-gpu';
 
 import { Model } from '../types';
+import { getGPUMemory, getGPUVendor, getGPUPlatform, estimateGPUMemory } from '../utils/gpu-lookup';
 
 export const useModels = () => {
   const [status, setStatus] = useState('Initializing...');
@@ -35,17 +36,25 @@ export const useModels = () => {
       return;
     }
     setDetectedGpu(gpuTier.gpu as string);
-    setStatus('Fetching GPU info...');
-    const vram = await fetchTechPowerUpVRAM(gpuTier.gpu as string);
-    if (!vram) {
-      setStatus('Unable to determine VRAM.');
-      return;
+    setStatus('Looking up GPU info...');
+    const vram = getGPUMemory(gpuTier.gpu as string);
+    const vendor = getGPUVendor(gpuTier.gpu as string);
+    const platform = getGPUPlatform(gpuTier.gpu as string);
+    
+    let finalVram = vram;
+    if (!finalVram) {
+      // Estimate memory for unknown GPUs
+      finalVram = estimateGPUMemory(gpuTier.tier || 1, platform);
+      setStatus(`GPU detected (${vendor}, estimated memory: ${finalVram} MB)`);
+    } else {
+      const memoryType = platform === 'mobile' || platform === 'integrated' ? 'unified memory' : 'VRAM';
+      setStatus(`GPU detected (${vendor}, ${memoryType}: ${finalVram} MB)`);
     }
-    setDetectedVram(vram);
-    setStatus(`Estimated VRAM: ${vram.toFixed(0)} MB`);
+    
+    setDetectedVram(finalVram);
     const recencyWeight = getRecencyWeight(optimizeMode);
     setStatus('Fetching models...');
-    let modelList = await fetchModels(vram, recencyWeight);
+    let modelList = await fetchModels(finalVram, recencyWeight);
     if (modelList.length === 0) {
       setStatus('Using fallback models.');
       modelList = fallbackModels();
@@ -103,27 +112,7 @@ export const useModels = () => {
     }
   }
 
-  /**
-   * Query TechPowerUp database to get VRAM in MB.
-   */
-  async function fetchTechPowerUpVRAM(searchName: string): Promise<number | null> {
-    const PROXY = 'https://corsproxy.io/?url=';
-    try {
-      const query = encodeURIComponent(searchName);
-      const res = await fetch(`${PROXY}https://www.techpowerup.com/gpu-specs/?ajaxsrch=${query}`);
-      const text = await res.text();
-      // Parse memory column of the first row
-      const cellMatchGB = text.match(/<td>\s*(\d+)\s*GB/i);
-      if (cellMatchGB) return parseInt(cellMatchGB[1], 10) * 1024;
-      const cellMatchMB = text.match(/<td>\s*(\d+)\s*MB/i);
-      if (cellMatchMB) return parseInt(cellMatchMB[1], 10);
-      return null;
-    } catch (e) {
-      console.error('Failed to fetch TechPowerUp VRAM:', e);
-      debugger;
-      return null;
-    }
-  }
+
 
   async function loadModel(modelId: string) {
     setStatus(`Loading ${modelId}...`);
