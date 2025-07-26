@@ -77,6 +77,7 @@ const App: React.FC = () => {
           setSidebarOpen={setSidebarOpen} 
           sidebarOpen={sidebarOpen} 
           detectedGpu={detectedGpu}
+          detectedVram={detectedVram}
           status={status}
         />
         <div className="content">

@@ -3,10 +3,11 @@ import './GPUDisplay.css';
 
 interface GPUDisplayProps {
   detectedGpu: string | null;
+  detectedVram: number | null;
   status: string;
 }
 
-const GPUDisplay: React.FC<GPUDisplayProps> = ({ detectedGpu, status }) => {
+const GPUDisplay: React.FC<GPUDisplayProps> = ({ detectedGpu, detectedVram, status }) => {
   const isLoading = !detectedGpu && status.includes('Checking');
   const hasError = status.includes('Failed') || status.includes('not supported');
 
@@ -43,6 +44,16 @@ const GPUDisplay: React.FC<GPUDisplayProps> = ({ detectedGpu, status }) => {
         return word.charAt(0).toUpperCase() + word.slice(1);
       })
       .join(' ');
+  };
+
+  const formatVRAM = (vram: number | null): string => {
+    if (!vram) return '';
+    
+    if (vram >= 1024) {
+      const gb = (vram / 1024).toFixed(1);
+      return `${gb} GB`;
+    }
+    return `${vram} MB`;
   };
 
   const brand = getGPUBrand(detectedGpu);
@@ -99,9 +110,18 @@ const GPUDisplay: React.FC<GPUDisplayProps> = ({ detectedGpu, status }) => {
             <span className="unknown-text">Unknown GPU</span>
           )}
         </div>
-        {brand !== 'unknown' && !isLoading && !hasError && (
-          <div className={`gpu-brand-badge ${brand}`}>
-            {brand.toUpperCase()}
+        {(!isLoading && !hasError) && (
+          <div className="gpu-badges">
+            {brand !== 'unknown' && (
+              <div className={`gpu-brand-badge ${brand}`}>
+                {brand.toUpperCase()}
+              </div>
+            )}
+            {detectedVram && (
+              <div className="gpu-vram-badge">
+                {formatVRAM(detectedVram)}
+              </div>
+            )}
           </div>
         )}
       </div>

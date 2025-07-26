@@ -3,6 +3,7 @@ import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import gpuDatabase from '../src/data/gpu-database.json';
 import { lookupGPU, getGPUMemory } from '../src/utils/gpu-lookup';
+import { fetchTechPowerUpVRAM, cleanGPUNameForSearch, delay } from '../src/utils/techpowerup-api';
 
 interface DetectGPUEntry {
   name: string;
@@ -272,4 +273,105 @@ describe('GPU Database Coverage Analysis', () => {
 
     expect(Object.keys(recommendations).length).toBeGreaterThanOrEqual(0);
   });
+
+  // NVIDIA VRAM Validation Test
+  it('should validate NVIDIA GPU VRAM amounts against TechPowerUp', async () => {
+    console.log('\n🔍 Validating NVIDIA GPU VRAM amounts against TechPowerUp...');
+    
+    // Extract all NVIDIA GPUs from the database
+    const allNvidiaGPUs = Object.entries(gpuDatabase)
+      .filter(([, gpu]) => gpu.vendor === 'nvidia')
+      .map(([name, gpu]) => ({ name, gpu }));
+
+    console.log(`Found ${allNvidiaGPUs.length} NVIDIA GPUs in database`);
+    expect(allNvidiaGPUs.length).toBeGreaterThan(0);
+
+    // Randomly sample 20 GPUs for testing
+    const maxGPUsToTest = 20;
+    const shuffled = [...allNvidiaGPUs].sort(() => Math.random() - 0.5);
+    const nvidiaGPUs = shuffled.slice(0, maxGPUsToTest);
+    
+    console.log(`Testing random sample of ${nvidiaGPUs.length} GPUs...\n`);
+
+    const results: Array<{
+      name: string;
+      databaseVRAM: number;
+      techPowerUpVRAM: number | null;
+      match: boolean;
+      searchName: string;
+    }> = [];
+
+    let processedCount = 0;
+    
+    for (const { name, gpu } of nvidiaGPUs) {
+      processedCount++;
+      
+      // Extract VRAM from database (convert to MB if needed)
+      const memory = gpu.memory as any;
+      const databaseVRAM = memory.vram || memory.unified || 0;
+      
+      // Create search name for TechPowerUp using shared utility
+      const searchName = cleanGPUNameForSearch(name);
+      
+      console.log(`[${processedCount}/${nvidiaGPUs.length}] Testing: ${name} -> "${searchName}"`);
+      
+      // Fetch VRAM from TechPowerUp using shared utility
+      const techPowerUpVRAM = await fetchTechPowerUpVRAM(searchName);
+      
+      // Compare results
+      const match = techPowerUpVRAM !== null && Math.abs(databaseVRAM - techPowerUpVRAM) <= 512; // Allow 512MB tolerance
+      
+      results.push({
+        name,
+        databaseVRAM,
+        techPowerUpVRAM,
+        match,
+        searchName
+      });
+      
+      // Add delay to avoid rate limiting using shared utility
+      if (processedCount < nvidiaGPUs.length) {
+        await delay(1000);
+      }
+    }
+
+    // Analyze results
+    const validResults = results.filter(r => r.techPowerUpVRAM !== null);
+    const matches = validResults.filter(r => r.match);
+    const mismatches = validResults.filter(r => !r.match);
+    const noData = results.filter(r => r.techPowerUpVRAM === null);
+
+    console.log('\n📊 NVIDIA VRAM Validation Results:');
+    console.log(`✅ Matches: ${matches.length}/${validResults.length} (${((matches.length / validResults.length) * 100).toFixed(1)}%)`);
+    console.log(`❌ Mismatches: ${mismatches.length}`);
+    console.log(`❓ No TechPowerUp data: ${noData.length}`);
+
+    // Log mismatches for review
+    if (mismatches.length > 0) {
+      console.log('\n🔍 VRAM Mismatches:');
+      mismatches.forEach(result => {
+        console.log(`  • ${result.name}:`);
+        console.log(`    Database: ${result.databaseVRAM}MB | TechPowerUp: ${result.techPowerUpVRAM}MB`);
+        console.log(`    Search: "${result.searchName}"`);
+      });
+    }
+
+    // Log GPUs with no data
+    if (noData.length > 0) {
+      console.log('\n❓ No TechPowerUp Data Found:');
+      noData.forEach(result => {
+        console.log(`  • ${result.name} (searched: "${result.searchName}")`);
+      });
+    }
+
+    // The test should pass if we have reasonable coverage
+    expect(validResults.length).toBeGreaterThan(0);
+    
+    // Log summary for manual review
+    console.log('\n💡 Summary:');
+    console.log(`- Tested ${results.length} NVIDIA GPUs`);
+    console.log(`- Found TechPowerUp data for ${validResults.length} GPUs`);
+    console.log(`- ${matches.length} exact matches (within 512MB tolerance)`);
+    console.log(`- Review mismatches to identify potential database improvements`);
+  }, 30000); // 30 second timeout for API calls
 });

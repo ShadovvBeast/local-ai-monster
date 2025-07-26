@@ -114,6 +114,49 @@
   text-overflow: clip;
 }
 
+.gpu-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.gpu-vram-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: linear-gradient(135deg, 
+    rgba(59, 130, 246, 0.8) 0%, 
+    rgba(147, 51, 234, 0.8) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: vramBadgeGlow 3s ease-in-out infinite alternate;
+}
+
+.gpu-vram-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  border-color: rgba(59, 130, 246, 0.6);
+}
+
+@keyframes vramBadgeGlow {
+  from {
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  }
+  to {
+    box-shadow: 0 2px 12px rgba(59, 130, 246, 0.5), 0 0 20px rgba(147, 51, 234, 0.2);
+  }
+}
+
 .gpu-text {
   color: #ffffff;
   font-weight: 700;

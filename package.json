@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:gpu-coverage": "vitest run --reporter=verbose tests/gpu-coverage.test.ts",
-    "generate-gpu-db": "bun run scripts/generate-gpu-database.ts"
+    "generate-gpu-db": "bun run scripts/generate-gpu-database.ts",
+    "sync-nvidia-vram": "bun run scripts/sync-nvidia-vram.ts"
   },
   "dependencies": {
 

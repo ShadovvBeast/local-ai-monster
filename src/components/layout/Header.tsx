@@ -5,10 +5,11 @@ interface HeaderProps {
   sidebarOpen: boolean;
   setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
   detectedGpu: string | null;
+  detectedVram: number | null;
   status: string;
 }
 
-const Header: React.FC<HeaderProps> = ({ sidebarOpen, setSidebarOpen, detectedGpu, status }) => {
+const Header: React.FC<HeaderProps> = ({ sidebarOpen, setSidebarOpen, detectedGpu, detectedVram, status }) => {
   return (
     <header className="header">
       <div className="header-left">
@@ -33,7 +34,7 @@ const Header: React.FC<HeaderProps> = ({ sidebarOpen, setSidebarOpen, detectedGp
       </div>
       
       <div className="header-right">
-        <GPUDisplay detectedGpu={detectedGpu} status={status} />
+        <GPUDisplay detectedGpu={detectedGpu} detectedVram={detectedVram} status={status} />
       </div>
     </header>
   );
